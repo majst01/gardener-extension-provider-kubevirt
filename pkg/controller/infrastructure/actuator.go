@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -54,13 +53,13 @@ func (a *actuator) Reconcile(ctx context.Context, infra *extensionsv1alpha1.Infr
 	// Get InfrastructureConfig from the Infrastructure resource
 	config, err := helper.GetInfrastructureConfig(infra)
 	if err != nil {
-		return errors.Wrap(err, "could not get InfrastructureConfig from infrastructure")
+		return fmt.Errorf("could not get InfrastructureConfig from infrastructure %w", err)
 	}
 
 	// Get the kubeconfig of the provider cluster
 	kubeconfig, err := kubevirt.GetKubeConfig(ctx, a.Client(), infra.Spec.SecretRef)
 	if err != nil {
-		return errors.Wrap(err, "could not get kubeconfig from infrastructure secret reference")
+		return fmt.Errorf("could not get kubeconfig from infrastructure secret reference %w", err)
 	}
 
 	var networks []kubevirtv1alpha1.NetworkStatus
@@ -78,7 +77,7 @@ func (a *actuator) Reconcile(ctx context.Context, infra *extensionsv1alpha1.Infr
 		// Create or update the tenant network in the provider cluster
 		nad, err := a.networkManager.CreateOrUpdateNetworkAttachmentDefinition(ctx, kubeconfig, name, labels, tenantNetwork.Config)
 		if err != nil {
-			return errors.Wrapf(err, "could not create or update tenant network %q", name)
+			return fmt.Errorf("could not create or update tenant network %q %w", name, err)
 		}
 
 		// Add the tenant network to the list of networks
@@ -93,14 +92,14 @@ func (a *actuator) Reconcile(ctx context.Context, infra *extensionsv1alpha1.Infr
 	// List all tenant networks in the provider cluster
 	nadList, err := a.networkManager.ListNetworkAttachmentDefinitions(ctx, kubeconfig, labels)
 	if err != nil {
-		return errors.Wrap(err, "could not list tenant networks")
+		return fmt.Errorf("could not list tenant networks %w", err)
 	}
 	for _, nad := range nadList.Items {
 		// If the tenant network is no longer listed in the InfrastructureConfig, delete it
 		if !containsNetworkWithName(networks, kutil.ObjectName(&nad)) {
 			// Delete the tenant network in the provider cluster
 			if err := a.networkManager.DeleteNetworkAttachmentDefinition(ctx, kubeconfig, nad.Name); err != nil {
-				return errors.Wrapf(err, "could not delete tenant network %q", nad.Name)
+				return fmt.Errorf("could not delete tenant network %q %w", nad.Name, err)
 			}
 		}
 	}
@@ -110,7 +109,7 @@ func (a *actuator) Reconcile(ctx context.Context, infra *extensionsv1alpha1.Infr
 		// Get the the shared network from the provider cluster
 		nad, err := a.networkManager.GetNetworkAttachmentDefinition(ctx, kubeconfig, sharedNetwork.Name, sharedNetwork.Namespace)
 		if err != nil {
-			return errors.Wrapf(err, "could not get shared network '%s/%s'", sharedNetwork.Namespace, sharedNetwork.Name)
+			return fmt.Errorf("could not get shared network '%s/%s' %w", sharedNetwork.Namespace, sharedNetwork.Name, err)
 		}
 
 		// Add the full shared network name to the list of networks
@@ -139,13 +138,13 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 	// Get InfrastructureConfig from the Infrastructure resource
 	config, err := helper.GetInfrastructureConfig(infra)
 	if err != nil {
-		return errors.Wrap(err, "could not get InfrastructureConfig from infrastructure")
+		return fmt.Errorf("could not get InfrastructureConfig from infrastructure %w", err)
 	}
 
 	// Get the kubeconfig of the provider cluster
 	kubeconfig, err := kubevirt.GetKubeConfig(ctx, a.Client(), infra.Spec.SecretRef)
 	if err != nil {
-		return errors.Wrap(err, "could not get kubeconfig from infrastructure secret reference")
+		return fmt.Errorf("could not get kubeconfig from infrastructure secret reference %w", err)
 	}
 
 	// Delete tenant networks
@@ -155,7 +154,7 @@ func (a *actuator) Delete(ctx context.Context, infra *extensionsv1alpha1.Infrast
 
 		// Delete the tenant network in the provider cluster
 		if err := a.networkManager.DeleteNetworkAttachmentDefinition(ctx, kubeconfig, name); err != nil {
-			return errors.Wrapf(err, "could not delete tenant network %q", name)
+			return fmt.Errorf("could not delete tenant network %q %w", name, err)
 		}
 	}
 

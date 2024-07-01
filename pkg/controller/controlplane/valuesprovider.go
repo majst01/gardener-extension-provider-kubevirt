@@ -16,6 +16,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
@@ -30,7 +31,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -149,7 +149,7 @@ func (vp *valuesProvider) GetConfigChartValues(
 	// Get kubeconfig
 	kubeconfig, err := kubevirt.GetKubeConfig(ctx, vp.Client(), cp.Spec.SecretRef)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get kubeconfig from controlplane secret reference")
+		return nil, fmt.Errorf("could not get kubeconfig from controlplane secret reference %w", err)
 	}
 
 	// Get config chart values
@@ -166,7 +166,7 @@ func (vp *valuesProvider) GetControlPlaneChartValues(
 ) (map[string]interface{}, error) {
 	cpConfig, err := helper.GetControlPlaneConfig(cp)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get ControlPlaneConfig from controlplane")
+		return nil, fmt.Errorf("could not get ControlPlaneConfig from controlplane %w", err)
 	}
 
 	return getControlPlaneChartValues(cpConfig, cp, cluster, checksums, scaledDown)

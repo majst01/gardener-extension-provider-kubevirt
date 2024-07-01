@@ -15,9 +15,10 @@
 package validation
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/kubevirt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -26,11 +27,11 @@ import (
 func ValidateCloudProviderSecret(secret *corev1.Secret) error {
 	kubeconfig, ok := secret.Data[kubevirt.Kubeconfig]
 	if !ok {
-		return errors.Errorf("missing %q field in secret", kubevirt.Kubeconfig)
+		return fmt.Errorf("missing %q field in secret", kubevirt.Kubeconfig)
 	}
 
 	if _, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig); err != nil {
-		return errors.Wrapf(err, "could not create REST config from kubeconfig")
+		return fmt.Errorf("could not create REST config from kubeconfig %w", err)
 	}
 
 	return nil

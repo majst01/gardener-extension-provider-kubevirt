@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt/helper"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -41,7 +41,7 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	// Decode the current worker provider status.
 	workerStatus, err := helper.GetWorkerStatus(w.worker)
 	if err != nil {
-		return errors.Wrap(err, "could not get WorkerStatus from worker")
+		return fmt.Errorf("could not get WorkerStatus from worker %w", err)
 	}
 	workerStatus.MachineImages = w.machineImages
 
@@ -53,7 +53,7 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	}
 
 	if err := w.Scheme().Convert(workerStatus, workerStatusV1alpha1, nil); err != nil {
-		return errors.Wrap(err, "could not convert WorkerStatus to v1alpha1")
+		return fmt.Errorf("could not convert WorkerStatus to v1alpha1 %w", err)
 	}
 
 	return controller.TryUpdateStatus(ctx, retry.DefaultBackoff, w.Client(), w.worker, func() error {
@@ -70,7 +70,7 @@ func (w *workerDelegate) getMachineImageURL(name, version string) (string, error
 	// Try to look up machine image in worker provider status as it was not found in the cloud profile.
 	workerStatus, err := helper.GetWorkerStatus(w.worker)
 	if err != nil {
-		return "", errors.Wrap(err, "could not get WorkerStatus from worker")
+		return "", fmt.Errorf("could not get WorkerStatus from worker %w", err)
 	}
 	if machineImage, err := helper.FindMachineImage(workerStatus.MachineImages, name, version); err == nil {
 		return machineImage.SourceURL, nil

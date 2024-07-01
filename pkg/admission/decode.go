@@ -15,10 +15,11 @@
 package admission
 
 import (
+	"fmt"
+
 	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -26,7 +27,7 @@ import (
 func DecodeWorkerConfig(decoder runtime.Decoder, worker *runtime.RawExtension) (*apiskubevirt.WorkerConfig, error) {
 	workerConfig := &apiskubevirt.WorkerConfig{}
 	if err := util.Decode(decoder, worker.Raw, workerConfig); err != nil {
-		return nil, errors.Wrap(err, "could not decode WorkerConfig")
+		return nil, fmt.Errorf("could not decode WorkerConfig %w", err)
 	}
 
 	return workerConfig, nil
@@ -36,7 +37,7 @@ func DecodeWorkerConfig(decoder runtime.Decoder, worker *runtime.RawExtension) (
 func DecodeControlPlaneConfig(decoder runtime.Decoder, cp *runtime.RawExtension) (*apiskubevirt.ControlPlaneConfig, error) {
 	controlPlaneConfig := &apiskubevirt.ControlPlaneConfig{}
 	if err := util.Decode(decoder, cp.Raw, controlPlaneConfig); err != nil {
-		return nil, errors.Wrap(err, "could not decode ControlPlaneConfig")
+		return nil, fmt.Errorf("could not decode ControlPlaneConfig %w", err)
 	}
 
 	return controlPlaneConfig, nil
@@ -46,7 +47,7 @@ func DecodeControlPlaneConfig(decoder runtime.Decoder, cp *runtime.RawExtension)
 func DecodeInfrastructureConfig(decoder runtime.Decoder, infra *runtime.RawExtension) (*apiskubevirt.InfrastructureConfig, error) {
 	infraConfig := &apiskubevirt.InfrastructureConfig{}
 	if err := util.Decode(decoder, infra.Raw, infraConfig); err != nil {
-		return nil, errors.Wrap(err, "could not decode InfrastructureConfig")
+		return nil, fmt.Errorf("could not decode InfrastructureConfig %w", err)
 	}
 
 	return infraConfig, nil
@@ -56,7 +57,7 @@ func DecodeInfrastructureConfig(decoder runtime.Decoder, infra *runtime.RawExten
 func DecodeCloudProfileConfig(decoder runtime.Decoder, config *runtime.RawExtension) (*apiskubevirt.CloudProfileConfig, error) {
 	cloudProfileConfig := &apiskubevirt.CloudProfileConfig{}
 	if err := util.Decode(decoder, config.Raw, cloudProfileConfig); err != nil {
-		return nil, errors.Wrap(err, "could not decode CloudProfileConfig")
+		return nil, fmt.Errorf("could not decode CloudProfileConfig %w", err)
 	}
 
 	return cloudProfileConfig, nil

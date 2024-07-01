@@ -16,6 +16,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/coreos/go-systemd/v22/unit"
@@ -23,7 +24,6 @@ import (
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -59,17 +59,17 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get cluster")
+		return fmt.Errorf("could not get cluster %w", err)
 	}
 
 	if cluster.Shoot != nil && cluster.Seed != nil && cluster.Shoot.Spec.Networking.Nodes != nil {
 		shootNodesIP, _, err := net.ParseCIDR(*cluster.Shoot.Spec.Networking.Nodes)
 		if err != nil {
-			return errors.Wrapf(err, "could not parse shoot nodes CIDR %q", *cluster.Shoot.Spec.Networking.Nodes)
+			return fmt.Errorf("could not parse shoot nodes CIDR %q %w", *cluster.Shoot.Spec.Networking.Nodes, err)
 		}
 		_, seedPodsIPNet, err := net.ParseCIDR(cluster.Seed.Spec.Networks.Pods)
 		if err != nil {
-			return errors.Wrapf(err, "could not parse seed pods CIDR %q", cluster.Seed.Spec.Networks.Pods)
+			return fmt.Errorf("could not parse seed pods CIDR %q %w", cluster.Seed.Spec.Networks.Pods, err)
 		}
 
 		// If the seed pods CIDR contains the shoot nodes CIDR (the seed cluster hosts the shoot cluster),

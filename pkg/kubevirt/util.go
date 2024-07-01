@@ -16,9 +16,9 @@ package kubevirt
 
 import (
 	"context"
+	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,11 +30,11 @@ const KubeconfigSecretKey = "kubeconfig"
 func GetKubeConfig(ctx context.Context, c client.Client, secretRef corev1.SecretReference) ([]byte, error) {
 	secret, err := extensionscontroller.GetSecretByReference(ctx, c, &secretRef)
 	if err != nil {
-		return []byte(""), errors.Wrap(err, "could not get secret by reference")
+		return []byte(""), fmt.Errorf("could not get secret by reference %w", err)
 	}
 	kubeconfig, ok := secret.Data[KubeconfigSecretKey]
 	if !ok {
-		return nil, errors.Errorf("missing %q field in secret", KubeconfigSecretKey)
+		return nil, fmt.Errorf("missing %q field in secret", KubeconfigSecretKey)
 	}
 	return kubeconfig, nil
 }
@@ -44,19 +44,19 @@ func GetKubeConfig(ctx context.Context, c client.Client, secretRef corev1.Secret
 func GetClient(kubeconfig []byte) (client.Client, string, error) {
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "could not create client config from kubeconfig")
+		return nil, "", fmt.Errorf("could not create client config from kubeconfig %w", err)
 	}
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
-		return nil, "", errors.Wrap(err, "could not get REST config from client config")
+		return nil, "", fmt.Errorf("could not get REST config from client config %w", err)
 	}
 	client, err := client.New(config, client.Options{})
 	if err != nil {
-		return nil, "", errors.Wrap(err, "could not create client from REST config")
+		return nil, "", fmt.Errorf("could not create client from REST config %w", err)
 	}
 	namespace, _, err := clientConfig.Namespace()
 	if err != nil {
-		return nil, "", errors.Wrap(err, "could not get namespace from client config")
+		return nil, "", fmt.Errorf("could not get namespace from client config %w", err)
 	}
 	return client, namespace, nil
 }

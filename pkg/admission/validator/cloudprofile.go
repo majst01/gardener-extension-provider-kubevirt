@@ -16,13 +16,13 @@ package validator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/admission"
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt/validation"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -50,7 +50,7 @@ var cpProviderConfigPath = specPath.Child("providerConfig")
 func (cp *cloudProfile) Validate(ctx context.Context, new, old client.Object) error {
 	cloudProfile, ok := new.(*core.CloudProfile)
 	if !ok {
-		return errors.Errorf("wrong object type %T", new)
+		return fmt.Errorf("wrong object type %T", new)
 	}
 
 	if cloudProfile.Spec.ProviderConfig == nil {
@@ -59,7 +59,7 @@ func (cp *cloudProfile) Validate(ctx context.Context, new, old client.Object) er
 
 	cpConfig, err := admission.DecodeCloudProfileConfig(cp.decoder, cloudProfile.Spec.ProviderConfig)
 	if err != nil {
-		return errors.Wrapf(err, "could not decode providerConfig of cloud profile %q", cloudProfile.Name)
+		return fmt.Errorf("could not decode providerConfig of cloud profile %q %w", cloudProfile.Name, err)
 	}
 
 	return validation.ValidateCloudProfileConfig(&cloudProfile.Spec, cpConfig).ToAggregate()

@@ -16,11 +16,11 @@ package kubevirt
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 	cdicorev1alpha1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -77,7 +77,7 @@ func (d *dataVolumeManager) CreateOrUpdateDataVolume(ctx context.Context, kubeco
 		})
 		return err
 	}); err != nil {
-		return nil, errors.Wrapf(err, "could not create or update DataVolume %q", kutil.ObjectName(dv))
+		return nil, fmt.Errorf("could not create or update DataVolume %q %w", kutil.ObjectName(dv), err)
 	}
 
 	return dv, nil
@@ -99,7 +99,7 @@ func (d *dataVolumeManager) DeleteDataVolume(ctx context.Context, kubeconfig []b
 		},
 	}
 	if err := client.IgnoreNotFound(c.Delete(ctx, dv)); err != nil {
-		return errors.Wrapf(err, "could not delete DataVolume %q", kutil.ObjectName(dv))
+		return fmt.Errorf("could not delete DataVolume %q %w", kutil.ObjectName(dv), err)
 	}
 
 	return nil
@@ -116,7 +116,7 @@ func (d *dataVolumeManager) ListDataVolumes(ctx context.Context, kubeconfig []by
 	d.logger.Info("Listing DataVolumes", "namespace", namespace, "labels", labels)
 	dvList := cdicorev1alpha1.DataVolumeList{}
 	if err := c.List(ctx, &dvList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
-		return nil, errors.Wrapf(err, "could not list DataVolumes in namespace %q", namespace)
+		return nil, fmt.Errorf("could not list DataVolumes in namespace %q %w", namespace, err)
 	}
 
 	return &dvList, nil

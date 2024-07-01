@@ -28,7 +28,6 @@ import (
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	componentbaseconfig "k8s.io/component-base/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -60,7 +59,7 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := aggOption.Complete(); err != nil {
-				return errors.Wrapf(err, "error completing options")
+				return fmt.Errorf(err, "error completing options")
 			}
 
 			util.ApplyClientConnectionConfigurationToRESTConfig(&componentbaseconfig.ClientConnectionConfiguration{
@@ -70,13 +69,13 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 
 			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
 			if err != nil {
-				return errors.Wrapf(err, "could not instantiate manager")
+				return fmt.Errorf(err, "could not instantiate manager")
 			}
 
 			coreinstall.Install(mgr.GetScheme())
 
 			if err := install.AddToScheme(mgr.GetScheme()); err != nil {
-				return errors.Wrapf(err, "could not update manager scheme")
+				return fmt.Errorf(err, "could not update manager scheme")
 			}
 
 			if err := mgr.GetFieldIndexer().IndexField(ctx, &gardencorev1beta1.SecretBinding{}, index.SecretRefNamespaceField, index.SecretRefNamespaceIndexerFunc); err != nil {

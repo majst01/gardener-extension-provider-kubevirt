@@ -16,6 +16,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/admission"
@@ -26,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -69,13 +69,13 @@ func (s *shoot) InjectAPIReader(apiReader client.Reader) error {
 func (s *shoot) Validate(ctx context.Context, new, old client.Object) error {
 	shoot, ok := new.(*core.Shoot)
 	if !ok {
-		return errors.Errorf("wrong object type %T", new)
+		return fmt.Errorf("wrong object type %T", new)
 	}
 
 	if old != nil {
 		oldShoot, ok := old.(*core.Shoot)
 		if !ok {
-			return errors.Errorf("wrong object type %T for old object", old)
+			return fmt.Errorf("wrong object type %T for old object", old)
 		}
 		return s.validateUpdate(ctx, oldShoot, shoot)
 	}
@@ -187,7 +187,7 @@ func (s *shoot) newValidationContext(ctx context.Context, shoot *core.Shoot, dec
 		var err error
 		infrastructureConfig, err = admission.DecodeInfrastructureConfig(decoder, shoot.Spec.Provider.InfrastructureConfig)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode infrastructureConfig of shoot %q", shoot.Name)
+			return nil, fmt.Errorf("could not decode infrastructureConfig of shoot %q %w", shoot.Name, err)
 		}
 	}
 
@@ -196,7 +196,7 @@ func (s *shoot) newValidationContext(ctx context.Context, shoot *core.Shoot, dec
 		var err error
 		controlPlaneConfig, err = admission.DecodeControlPlaneConfig(decoder, shoot.Spec.Provider.ControlPlaneConfig)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode controlPlaneConfig of shoot %q", shoot.Name)
+			return nil, fmt.Errorf("could not decode controlPlaneConfig of shoot %q %w", shoot.Name, err)
 		}
 	}
 
@@ -207,7 +207,7 @@ func (s *shoot) newValidationContext(ctx context.Context, shoot *core.Shoot, dec
 			var err error
 			workerConfig, err = admission.DecodeWorkerConfig(decoder, worker.ProviderConfig)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode providerConfig of worker %q", worker.Name)
+				return nil, fmt.Errorf("could not decode providerConfig of worker %q %w", worker.Name, err)
 			}
 		}
 
@@ -219,15 +219,15 @@ func (s *shoot) newValidationContext(ctx context.Context, shoot *core.Shoot, dec
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := s.client.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
-		return nil, errors.Wrapf(err, "could not get cloud profile %q", cloudProfile.Name)
+		return nil, fmt.Errorf("could not get cloud profile %q %w", cloudProfile.Name, err)
 	}
 
 	if cloudProfile.Spec.ProviderConfig == nil {
-		return nil, errors.Errorf("missing providerConfig in cloud profile %q", cloudProfile.Name)
+		return nil, fmt.Errorf("missing providerConfig in cloud profile %q", cloudProfile.Name)
 	}
 	cloudProfileConfig, err := admission.DecodeCloudProfileConfig(decoder, cloudProfile.Spec.ProviderConfig)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not decode providerConfig of cloud profile %q", cloudProfile.Name)
+		return nil, fmt.Errorf("could not decode providerConfig of cloud profile %q %w", cloudProfile.Name, err)
 	}
 
 	return &validationContext{
@@ -246,7 +246,7 @@ func (s *shoot) validateShootSecret(ctx context.Context, shoot *core.Shoot) erro
 		secretBindingKey = kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName)
 	)
 	if err := kutil.LookupObject(ctx, s.client, s.apiReader, secretBindingKey, secretBinding); err != nil {
-		return errors.Wrapf(err, "could not find secret binding %q", secretBindingKey.String())
+		return fmt.Errorf("could not find secret binding %q %w", secretBindingKey.String(), err)
 	}
 
 	var (
@@ -254,7 +254,7 @@ func (s *shoot) validateShootSecret(ctx context.Context, shoot *core.Shoot) erro
 		secretKey = kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
 	)
 	if err := kutil.LookupObject(ctx, s.client, s.apiReader, secretKey, secret); err != nil {
-		return errors.Wrapf(err, "could not find secret %q", secretKey.String())
+		return fmt.Errorf("could not find secret %q %w", secretKey.String(), err)
 	}
 
 	return validation.ValidateCloudProviderSecret(secret)

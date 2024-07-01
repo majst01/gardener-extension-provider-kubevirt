@@ -15,9 +15,9 @@
 package helper
 
 import (
-	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
+	"fmt"
 
-	"github.com/pkg/errors"
+	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
 )
 
 // FindMachineImage takes a list of machine images and tries to find the first entry
@@ -29,7 +29,7 @@ func FindMachineImage(configImages []apiskubevirt.MachineImage, imageName, image
 			return &machineImage, nil
 		}
 	}
-	return nil, errors.Errorf("machine image with name %q and version %q not found", imageName, imageVersion)
+	return nil, fmt.Errorf("machine image with name %q and version %q not found", imageName, imageVersion)
 }
 
 // FindImageFromCloudProfile takes a list of machine images, and the desired image name and version. It tries
@@ -49,5 +49,5 @@ func FindImageFromCloudProfile(cloudProfileConfig *apiskubevirt.CloudProfileConf
 		}
 	}
 
-	return "", errors.Errorf("machine image with name %q and version %q not found", imageName, imageVersion)
+	return "", fmt.Errorf("machine image with name %q and version %q not found", imageName, imageVersion)
 }

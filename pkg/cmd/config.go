@@ -18,8 +18,8 @@ import (
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/config"
 	configloader "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/config/loader"
 
+	"errors"
 	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
-	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
 

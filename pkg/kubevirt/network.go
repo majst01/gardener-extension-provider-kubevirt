@@ -16,12 +16,12 @@ package kubevirt
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	"github.com/pkg/errors"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,7 +86,7 @@ func (n *networkManager) CreateOrUpdateNetworkAttachmentDefinition(ctx context.C
 		})
 		return err
 	}); err != nil {
-		return nil, errors.Wrapf(err, "could not create or update NetworkAttachmentDefinition %q", kutil.ObjectName(nad))
+		return nil, fmt.Errorf("could not create or update NetworkAttachmentDefinition %q %w", kutil.ObjectName(nad), err)
 	}
 
 	return nad, nil
@@ -108,7 +108,7 @@ func (n *networkManager) DeleteNetworkAttachmentDefinition(ctx context.Context, 
 		},
 	}
 	if err := client.IgnoreNotFound(c.Delete(ctx, nad)); err != nil {
-		return errors.Wrapf(err, "could not delete NetworkAttachmentDefinition %q", kutil.ObjectName(nad))
+		return fmt.Errorf("could not delete NetworkAttachmentDefinition %q %w", kutil.ObjectName(nad), err)
 	}
 
 	return nil
@@ -132,9 +132,9 @@ func (n *networkManager) GetNetworkAttachmentDefinition(ctx context.Context, kub
 	nad := &networkv1.NetworkAttachmentDefinition{}
 	if err := c.Get(ctx, nadKey, nad); err != nil {
 		if apierrors.IsNotFound(err) {
-			return nil, errors.Wrapf(err, "NetworkAttachmentDefinition '%v' not found", nadKey)
+			return nil, fmt.Errorf("NetworkAttachmentDefinition '%v' not found %w", nadKey, err)
 		}
-		return nil, errors.Wrapf(err, "could not get NetworkAttachmentDefinition '%v'", nadKey)
+		return nil, fmt.Errorf("could not get NetworkAttachmentDefinition '%v' %w", nadKey, err)
 	}
 
 	return nad, nil
@@ -153,13 +153,13 @@ func (n *networkManager) ListNetworkAttachmentDefinitions(ctx context.Context, k
 		if apierrors.IsNotFound(err) {
 			return nadList, nil
 		}
-		return nil, errors.Wrapf(err, "could not get CRD %q", nadCRDName)
+		return nil, fmt.Errorf("could not get CRD %q %w", nadCRDName, err)
 	}
 
 	// List all NetworkAttachmentDefinitions in the provider cluster matching the given namespace and labels
 	n.logger.Info("Listing NetworkAttachmentDefinitions", "namespace", namespace, "labels", labels)
 	if err := c.List(ctx, nadList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
-		return nil, errors.Wrap(err, "could not list NetworkAttachmentDefinitions")
+		return nil, fmt.Errorf("could not list NetworkAttachmentDefinitions %w", err)
 	}
 
 	return nadList, nil

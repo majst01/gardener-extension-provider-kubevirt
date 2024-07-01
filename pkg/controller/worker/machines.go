@@ -25,12 +25,13 @@ import (
 	kubevirtv1alpha1 "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt/v1alpha1"
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/kubevirt"
 
+	"errors"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +68,7 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 		ctx, filepath.Join(kubevirt.InternalChartsPath, "machine-class"), w.worker.Namespace, "machine-class",
 		kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}),
 	); err != nil {
-		return errors.Wrap(err, "could not apply machine-class chart")
+		return fmt.Errorf("could not apply machine-class chart %w", err)
 	}
 
 	if err := w.createOrUpdateMachineClassVolumes(ctx); err != nil {
@@ -97,18 +98,18 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 
 	kubeconfig, err := kubevirt.GetKubeConfig(ctx, w.Client(), w.worker.Spec.SecretRef)
 	if err != nil {
-		return errors.Wrap(err, "could not get kubeconfig from worker secret reference")
+		return fmt.Errorf("could not get kubeconfig from worker secret reference %w", err)
 	}
 
 	// Get a client and a namespace for the provider cluster from the kubeconfig
 	_, namespace, err := w.clientFactory.GetClient(kubeconfig)
 	if err != nil {
-		return errors.Wrap(err, "could not create client from kubeconfig")
+		return fmt.Errorf("could not create client from kubeconfig %w", err)
 	}
 
 	infrastructureStatus, err := helper.GetInfrastructureStatus(w.worker)
 	if err != nil {
-		return errors.Wrap(err, "could not get InfrastructureStatus from worker")
+		return fmt.Errorf("could not get InfrastructureStatus from worker %w", err)
 	}
 
 	infrastructureStatusV1alpha1 := &kubevirtv1alpha1.InfrastructureStatus{
@@ -118,7 +119,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		},
 	}
 	if err := w.Scheme().Convert(infrastructureStatus, infrastructureStatusV1alpha1, nil); err != nil {
-		return errors.Wrap(err, "could not convert InfrastructureStatus to v1alpha1")
+		return fmt.Errorf("could not convert InfrastructureStatus to v1alpha1 %w", err)
 	}
 
 	var networksData []string
@@ -135,7 +136,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 
 		workerConfig, err := helper.GetWorkerConfig(&pool)
 		if err != nil {
-			return errors.Wrapf(err, "could not get WorkerConfig from worker pool %q", pool.Name)
+			return fmt.Errorf("could not get WorkerConfig from worker pool %q %w", pool.Name, err)
 		}
 
 		machineType, err := w.getMachineType(pool.MachineType)
@@ -145,7 +146,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 
 		workerPoolHash, err := worker.WorkerPoolHash(pool, w.cluster, networksData...)
 		if err != nil {
-			return errors.Wrapf(err, "could not compute hash for worker pool %q", pool.Name)
+			return fmt.Errorf("could not compute hash for worker pool %q %w", pool.Name, err)
 		}
 
 		imageSourceURL, err := w.getMachineImageURL(pool.MachineImage.Name, pool.MachineImage.Version)
@@ -274,7 +275,7 @@ func (w *workerDelegate) getStorageClassNameAndSize(volumeTypeName, volumeSize s
 	}
 	storageSize, err := resource.ParseQuantity(volumeSize)
 	if err != nil {
-		return "", resource.Quantity{}, errors.Wrapf(err, "could not parse volume size %q as quantity", volumeSize)
+		return "", resource.Quantity{}, fmt.Errorf("could not parse volume size %q as quantity %w", volumeSize, err)
 	}
 	return volumeType.Class, storageSize, nil
 }
@@ -285,7 +286,7 @@ func (w *workerDelegate) getMachineType(name string) (*corev1beta1.MachineType, 
 			return &mt, nil
 		}
 	}
-	return nil, errors.Errorf("machine type %q not found in cloud profile", name)
+	return nil, fmt.Errorf("machine type %q not found in cloud profile", name)
 }
 
 func (w *workerDelegate) getVolumeType(name string) (*corev1beta1.VolumeType, error) {
@@ -294,7 +295,7 @@ func (w *workerDelegate) getVolumeType(name string) (*corev1beta1.VolumeType, er
 			return &vt, nil
 		}
 	}
-	return nil, errors.Errorf("volume type %q not found in cloud profile", name)
+	return nil, fmt.Errorf("volume type %q not found in cloud profile", name)
 }
 
 func (w *workerDelegate) getMachineTypeExtension(name string) *apiskubevirt.MachineType {
@@ -315,12 +316,12 @@ func (w *workerDelegate) createOrUpdateMachineClassVolumes(ctx context.Context) 
 
 	kubeconfig, err := kubevirt.GetKubeConfig(ctx, w.Client(), w.worker.Spec.SecretRef)
 	if err != nil {
-		return errors.Wrap(err, "could not get kubeconfig from worker secret reference")
+		return fmt.Errorf("could not get kubeconfig from worker secret reference %w", err)
 	}
 
 	for name, dataVolumeSpec := range w.machineClassVolumes {
 		if _, err := w.dataVolumeManager.CreateOrUpdateDataVolume(ctx, kubeconfig, name, labels, *dataVolumeSpec); err != nil {
-			return errors.Wrapf(err, "could not create or update data volume %q", name)
+			return fmt.Errorf("could not create or update data volume %q %w", name, err)
 		}
 	}
 

@@ -16,10 +16,10 @@ package validator
 
 import (
 	"context"
+	"fmt"
 
 	secretutil "github.com/gardener/gardener/extensions/pkg/util/secret"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,13 +48,13 @@ func (s *secret) InjectClient(client client.Client) error {
 func (s *secret) Validate(ctx context.Context, newObj, oldObj client.Object) error {
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
-		return errors.Errorf("wrong object type %T", newObj)
+		return fmt.Errorf("wrong object type %T", newObj)
 	}
 
 	if oldObj != nil {
 		oldSecret, ok := oldObj.(*corev1.Secret)
 		if !ok {
-			return errors.Errorf("wrong object type %T for old object", oldObj)
+			return fmt.Errorf("wrong object type %T for old object", oldObj)
 		}
 
 		if equality.Semantic.DeepEqual(secret.Data, oldSecret.Data) {
@@ -64,7 +64,7 @@ func (s *secret) Validate(ctx context.Context, newObj, oldObj client.Object) err
 
 	isInUse, err := secretutil.IsSecretInUseByShoot(ctx, s.client, secret, kubevirt.Type)
 	if err != nil {
-		return errors.Wrap(err, "could not check if secret is in use by shoot")
+		return fmt.Errorf("could not check if secret is in use by shoot %w", err)
 	}
 
 	if !isInUse {

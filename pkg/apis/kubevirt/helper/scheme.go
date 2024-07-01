@@ -16,6 +16,7 @@ package helper
 
 import (
 	"context"
+	"fmt"
 
 	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt/install"
@@ -25,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
@@ -91,7 +91,7 @@ func ApplyMachineClassCRDs(ctx context.Context, config *rest.Config) error {
 
 	c, err := client.New(config, client.Options{Scheme: Scheme})
 	if err != nil {
-		return errors.Wrap(err, "could not create client")
+		return fmt.Errorf("could not create client %w", err)
 	}
 
 	spec := machineClassCRD.Spec.DeepCopy()
@@ -100,7 +100,7 @@ func ApplyMachineClassCRDs(ctx context.Context, config *rest.Config) error {
 		machineClassCRD.Spec = *spec
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "could not create or update machineclasses CRD")
+		return fmt.Errorf("could not create or update machineclasses CRD %w", err)
 	}
 
 	return nil
@@ -111,7 +111,7 @@ func GetCloudProfileConfig(cloudProfile *gardencorev1beta1.CloudProfile) (*apisk
 	cloudProfileConfig := &apiskubevirt.CloudProfileConfig{}
 	if cloudProfile.Spec.ProviderConfig != nil && cloudProfile.Spec.ProviderConfig.Raw != nil {
 		if _, _, err := decoder.Decode(cloudProfile.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of cloudProfile %q", kutil.ObjectName(cloudProfile))
+			return nil, fmt.Errorf("could not decode providerConfig of cloudProfile %q %w", kutil.ObjectName(cloudProfile), err)
 		}
 	}
 	return cloudProfileConfig, nil
@@ -122,7 +122,7 @@ func GetInfrastructureConfig(infra *extensionsv1alpha1.Infrastructure) (*apiskub
 	config := &apiskubevirt.InfrastructureConfig{}
 	if infra.Spec.ProviderConfig != nil && infra.Spec.ProviderConfig.Raw != nil {
 		if _, _, err := decoder.Decode(infra.Spec.ProviderConfig.Raw, nil, config); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of infrastructure %q", kutil.ObjectName(infra))
+			return nil, fmt.Errorf("could not decode providerConfig of infrastructure %q %w", kutil.ObjectName(infra), err)
 		}
 	}
 	return config, nil
@@ -133,7 +133,7 @@ func GetControlPlaneConfig(cp *extensionsv1alpha1.ControlPlane) (*apiskubevirt.C
 	config := &apiskubevirt.ControlPlaneConfig{}
 	if cp.Spec.ProviderConfig != nil && cp.Spec.ProviderConfig.Raw != nil {
 		if _, _, err := decoder.Decode(cp.Spec.ProviderConfig.Raw, nil, config); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of controlplane %q", kutil.ObjectName(cp))
+			return nil, fmt.Errorf("could not decode providerConfig of controlplane %q %w", kutil.ObjectName(cp), err)
 		}
 	}
 	return config, nil
@@ -144,7 +144,7 @@ func GetWorkerConfig(p *extensionsv1alpha1.WorkerPool) (*apiskubevirt.WorkerConf
 	config := &apiskubevirt.WorkerConfig{}
 	if p.ProviderConfig != nil && p.ProviderConfig.Raw != nil {
 		if _, _, err := decoder.Decode(p.ProviderConfig.Raw, nil, config); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerConfig of worker pool %q", p.Name)
+			return nil, fmt.Errorf("could not decode providerConfig of worker pool %q %w", p.Name, err)
 		}
 	}
 	return config, nil
@@ -155,7 +155,7 @@ func GetInfrastructureStatus(w *extensionsv1alpha1.Worker) (*apiskubevirt.Infras
 	status := &apiskubevirt.InfrastructureStatus{}
 	if w.Spec.InfrastructureProviderStatus != nil && w.Spec.InfrastructureProviderStatus.Raw != nil {
 		if _, _, err := decoder.Decode(w.Spec.InfrastructureProviderStatus.Raw, nil, status); err != nil {
-			return nil, errors.Wrapf(err, "could not decode infrastructureProviderStatus of worker %q", kutil.ObjectName(w))
+			return nil, fmt.Errorf("could not decode infrastructureProviderStatus of worker %q %w", kutil.ObjectName(w), err)
 		}
 	}
 	return status, nil
@@ -166,7 +166,7 @@ func GetWorkerStatus(w *extensionsv1alpha1.Worker) (*apiskubevirt.WorkerStatus, 
 	status := &apiskubevirt.WorkerStatus{}
 	if w.Status.ProviderStatus != nil && w.Status.ProviderStatus.Raw != nil {
 		if _, _, err := decoder.Decode(w.Status.ProviderStatus.Raw, nil, status); err != nil {
-			return nil, errors.Wrapf(err, "could not decode providerStatus of worker %q", kutil.ObjectName(w))
+			return nil, fmt.Errorf("could not decode providerStatus of worker %q %w", kutil.ObjectName(w), err)
 		}
 	}
 	return status, nil

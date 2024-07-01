@@ -15,9 +15,9 @@
 package kubevirt
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,7 +57,7 @@ func getClient(kubeconfig []byte, clientFactory ClientFactory, clients map[strin
 	// Create a new client for the given kubeconfig
 	c, namespace, err := clientFactory.GetClient(kubeconfig)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "could not create client from kubeconfig")
+		return nil, "", fmt.Errorf("could not create client from kubeconfig %w", err)
 	}
 
 	// Add client to cache and return it

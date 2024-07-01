@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	apiskubevirt "github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt"
 	"github.com/gardener/gardener-extension-provider-kubevirt/pkg/apis/kubevirt/helper"
@@ -29,7 +30,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	cdicorev1alpha1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -66,7 +66,7 @@ func (a *actuator) InjectClient(client client.Client) error {
 
 func (a *actuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if err := a.Actuator.Reconcile(ctx, worker, cluster); err != nil {
-		return errors.Wrap(err, "could not reconcile worker")
+		return fmt.Errorf("could not reconcile worker %w", err)
 	}
 
 	return a.deleteOrphanedDataVolumes(ctx, worker)
@@ -74,7 +74,7 @@ func (a *actuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Wor
 
 func (a *actuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if err := a.Actuator.Delete(ctx, worker, cluster); err != nil {
-		return errors.Wrap(err, "could not reconcile worker deletion")
+		return fmt.Errorf("could not reconcile worker deletion %w", err)
 	}
 
 	return a.deleteOrphanedDataVolumes(ctx, worker)
@@ -84,13 +84,13 @@ func (a *actuator) deleteOrphanedDataVolumes(ctx context.Context, worker *extens
 	// Get the kubeconfig of the provider cluster
 	kubeconfig, err := kubevirt.GetKubeConfig(ctx, a.client, worker.Spec.SecretRef)
 	if err != nil {
-		return errors.Wrap(err, "could not get kubeconfig from worker secret reference")
+		return fmt.Errorf("could not get kubeconfig from worker secret reference %w", err)
 	}
 
 	// List all machine classes in the shoot namespace
 	machineClasses := &machinev1alpha1.MachineClassList{}
 	if err := a.client.List(ctx, machineClasses, client.InNamespace(worker.Namespace)); err != nil {
-		return errors.Wrapf(err, "could not list machine classes in namespace %q", worker.Namespace)
+		return fmt.Errorf("could not list machine classes in namespace %q %w", worker.Namespace, err)
 	}
 	machineClassNames := names(machineClasses)
 
@@ -102,14 +102,14 @@ func (a *actuator) deleteOrphanedDataVolumes(ctx context.Context, worker *extens
 	// List all data volumes in the provider cluster
 	dataVolumes, err := a.dataVolumeManager.ListDataVolumes(ctx, kubeconfig, labels)
 	if err != nil {
-		return errors.Wrap(err, "could not list data volumes")
+		return fmt.Errorf("could not list data volumes %w", err)
 	}
 
 	// Delete data volumes that don't have a matching machine class
 	for _, dataVolume := range dataVolumes.Items {
 		if !machineClassNames.Has(dataVolume.Name) {
 			if err := a.dataVolumeManager.DeleteDataVolume(ctx, kubeconfig, dataVolume.Name); err != nil {
-				return errors.Wrapf(err, "could not delete orphaned data volume %q", dataVolume.Name)
+				return fmt.Errorf("could not delete orphaned data volume %q %w", dataVolume.Name, err)
 			}
 		}
 	}
@@ -136,17 +136,17 @@ type delegateFactory struct {
 func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (genericactuator.WorkerDelegate, error) {
 	clientset, err := kubernetes.NewForConfig(d.RESTConfig())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create clientset from REST config")
+		return nil, fmt.Errorf("could not create clientset from REST config %w", err)
 	}
 
 	serverVersion, err := clientset.Discovery().ServerVersion()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get server version")
+		return nil, fmt.Errorf("could not get server version %w", err)
 	}
 
 	seedChartApplier, err := gardener.NewChartApplierForConfig(d.RESTConfig())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create chart applier from REST config")
+		return nil, fmt.Errorf("could not create chart applier from REST config %w", err)
 	}
 
 	return NewWorkerDelegate(
@@ -194,7 +194,7 @@ func NewWorkerDelegate(
 	if cluster != nil {
 		cloudProfileConfig, err = helper.GetCloudProfileConfig(cluster.CloudProfile)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get CloudProfileConfig from cloud profile")
+			return nil, fmt.Errorf("could not get CloudProfileConfig from cloud profile %w", err)
 		}
 	}
 
